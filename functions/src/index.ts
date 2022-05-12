@@ -1,56 +1,7 @@
-import * as functions from "firebase-functions";
-
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//   functions.logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
-
-
+import * as functions from "firebase-functions"
 const admin = require("firebase-admin");
+const cors = require("cors")({origin: true});
 admin.initializeApp();
-const axios = require("axios");
-
-const msg91TemplateId = "61eeca20e73da90b34413fa2";
-const msg91AuthKey = "372225AtKUWZBhw61ecdf4eP1";
-
-// exports.sendOTP = functions.https.onRequest((request, response) => {
-//   console.log("request", request.body);
-//   const {phoneNumber} = request.body;
-//   console.log("Phone Number::>>", phoneNumber);
-//   const otp = Math.floor(100000 + Math.random() * 900000);
-//   const message = `Your OTP is ${otp}.
-//   Please enter it to verify your phone number.`;
-//   let OTPDataStoreKey;
-//   admin
-//       .firestore()
-//       .collection("OTP")
-//       .doc(phoneNumber).set({
-//         otp: otp,
-//       }).then((docRef) => {
-//         OTPDataStoreKey = docRef.id;
-//         console.log("Document written with ID: ", docRef);
-//       }).catch((error) => {
-//         console.error("Error adding document: ", error);
-//       });
-
-//   axios.get(`https://api.msg91.com/api/v5/otp?authkey=${msg91AuthKey}&template_id=${msg91TemplateId}&mobile=${phoneNumber}`)
-//       .then((res) => {
-//         console.log(res.data);
-//         response.json({
-//           message: message,
-//           otp: otp,
-//           DataBaseKey: OTPDataStoreKey,
-//         });
-//       })
-//       .catch((error) => {
-//         response.status(500).json({
-//           error: error.code,
-//         });
-//       });
-// });
 
 
 exports.createBooking = functions.https.onRequest((request, response) => {
@@ -76,13 +27,14 @@ exports.createBooking = functions.https.onRequest((request, response) => {
 
 exports.updateBooking = functions.https.onRequest((request, response) => {
   const booking = request.body;
+  const userId = request.body.userId;
   admin
       .firestore()
       .collection("Booking")
-      .doc(booking.phoneNumber).set(booking)
+      .doc(userId).set(booking)
       .then( () => {
         response.json({
-          id: booking.phoneNumber,
+          id: booking.userId,
           name: booking.pickup,
         });
       })
@@ -96,25 +48,28 @@ exports.updateBooking = functions.https.onRequest((request, response) => {
 
 
 exports.getBookings = functions.https.onRequest((request, response) => {
-  admin
-      .firestore()
-      .collection("Bookings")
-      .where(admin.firestore.FieldPath.documentId(), "==", request.id )
-      .get()
-      .then((querySnapshot) => {
-        const bookings = [];
-        querySnapshot.forEach((doc) => {
-          const booking = doc.data();
-          booking.pickup = doc.pickup;
-          bookings.push(booking);
+  cors(request, response, () => {
+    const userId = request.body.userId;
+    admin
+        .firestore()
+        .collection("Bookings")
+        .doc(userId)
+        .get()
+        .then((querySnapshot) => {
+          const bookings = [];
+          querySnapshot.forEach((doc) => {
+            const booking = doc.data();
+            booking.pickup = doc.pickup;
+            bookings.push(booking);
+          });
+          response.json(bookings);
+        })
+        .catch((error) => {
+          response.status(500).json({
+            error: error.code,
+          });
         });
-        response.json(bookings);
-      })
-      .catch((error) => {
-        response.status(500).json({
-          error: error.code,
-        });
-      });
+  });
 });
 
 exports.getAllBookings = functions.https
@@ -138,25 +93,50 @@ exports.getAllBookings = functions.https
           });
     });
 
+exports.getBookingDetails = functions.https.onRequest((request, response) => {
+  cors(request, response, () => {
+    const bookingId = request.body.bookingId;
+    admin
+        .firestore()
+        .collection("Bookings")
+        .doc(bookingId)
+        .get()
+        .then((querySnapshot) => {
+          const bookings = [];
+          querySnapshot.forEach((doc) => {
+            const booking = doc.data();
+            booking.pickup = doc.pickup;
+            bookings.push(booking);
+          });
+          response.json(bookings);
+        })
+        .catch((error) => {
+          response.status(500).json({
+            error: error.code,
+          });
+        });
+  });
+});
 
 exports.createPackage = functions.https.onRequest((request, response) => {
-  const package = request.body;
-  admin
-      .firestore()
-      .collection("Package")
-      .doc().set(package)
-      .then( () => {
-        response.json({
-          id: package.id,
+  cors(request, response, () => {
+    const package = request.body;
+    admin
+        .firestore()
+        .collection("Package")
+        .doc().set(package)
+        .then( () => {
+          response.json({
+            id: package.id,
+          });
+        })
+        .catch((error) => {
+          response.status(500).json({
+            error: error.code,
+          });
         });
-      })
-      .catch((error) => {
-        response.status(500).json({
-          error: error.code,
-        });
-      });
-}
-);
+  });
+});
 
 exports.updatePackage = functions.https.onRequest((request, response) => {
   const package = request.body;
@@ -199,7 +179,5 @@ exports.getAllPackages = functions.https
             });
       });
     });
-
-
 
 
