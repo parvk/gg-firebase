@@ -179,24 +179,27 @@ exports.updatePackage = functions.https.onRequest((request, response) => {
 
 exports.getAllPackages = functions.https
     .onRequest((request, response) => {
-      admin
-          .firestore()
-          .collection("Package")
-          .get()
-          .then((querySnapshot) => {
-            const packages = [];
-            querySnapshot.forEach((doc) => {
-              const package = doc.data();
-              packages.push(package);
+      cors(request, response, () => {
+        admin
+            .firestore()
+            .collection("Package")
+            .get()
+            .then((querySnapshot) => {
+              const packages = [];
+              querySnapshot.forEach((doc) => {
+                const package = doc.data();
+                packages.push(package);
+              });
+              response.json(packages);
+            })
+            .catch((error) => {
+              response.status(500).json({
+                error: error.code,
+              });
             });
-            response.json(packages);
-          })
-          .catch((error) => {
-            response.status(500).json({
-              error: error.code,
-            });
-          });
+      });
     });
+
 
 
 
